@@ -149,6 +149,8 @@ For more information on Monero and P2Pool:
 - [P2Pool Documentation](https://github.com/SChernykh/p2pool)
 - [XMRig Documentation](https://xmrig.com/docs)
 
+We are not endorsing Monero nor are a partner of Monero. This is for educational purpose only.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
