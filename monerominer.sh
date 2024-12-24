@@ -695,7 +695,7 @@ show_help() {
     echo -e "${GREEN}  uninstall${NC}     - Uninstall the script in path"
     echo -e "${GREEN}  help${NC}          - Show this help message"
     echo -e "${GREEN}  build${NC}         - Run full installation and setup"
-    echo -e "${GREEN}  services${NC}      - Show status of all Monero services"
+    echo -e "${GREEN}  status${NC}        - Show status of all Monero services"
     echo -e "${GREEN}  start${NC}         - Start all Monero services"
     echo -e "${GREEN}  stop${NC}          - Stop all Monero services"
     echo -e "${GREEN}  restart${NC}       - Restart all Monero services"
