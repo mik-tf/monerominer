@@ -498,9 +498,7 @@ create_service_scripts() {
     sudo tee /usr/local/bin/run-monerod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${MONERO_DIR}
-./monerod --config-file=${MONERO_DIR}/monerod.conf \
-    --non-interactive \
-    --log-file=${MONERO_DIR}/monerodservice.log
+./monerod --data-dir ${MONERO_DIR}/data --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist --non-interactive
 EOF
 
     # Create P2Pool script
@@ -510,17 +508,15 @@ cd ${P2POOL_DIR}
 ./p2pool \
     --wallet ${WALLET_ADDRESS} \
     --host 127.0.0.1 \
-    --rpc-port 18081 \
-    --zmq-port ${MONERO_ZMQ_PORT} \
-    --stratum 0.0.0.0:${MINING_PORT} \
-    $(if [[ $USE_P2POOL_MINI =~ ^[Yy]$ ]]; then echo "--mini"; fi)
+    $(if [[ $USE_P2POOL_MINI =~ ^[Yy]$ ]]; then echo "--mini"; fi) \
+    --non-interactive
 EOF
 
     # Create XMRig script
     sudo tee /usr/local/bin/run-xmrig.sh > /dev/null << EOF
 #!/bin/bash
 cd ${XMRIG_DIR}
-./xmrig --config=${XMRIG_DIR}/config.json
+./xmrig -o 127.0.0.1:3333 -u x+50000 --randomx-1gb-pages --non-interactive
 EOF
 
     # Make scripts executable
@@ -585,7 +581,7 @@ Requires=p2pool.service
 
 [Service]
 Type=simple
-User=${USER}
+User=root
 ExecStart=/usr/local/bin/run-xmrig.sh
 StandardInput=null
 StandardOutput=append:/var/log/xmrig.log
