@@ -159,16 +159,16 @@ uninstall() {
         echo "Removing script and configuration files..."
         sudo rm -f /usr/local/bin/monerominer
         # Remove environment file
-        rm -f "$HOME/.monero_environment"
+        #rm -f "$HOME/.monero_environment"
 
         # Ask user if they want to remove data
-        read -p "Do you want to remove all data? (y/n): " REMOVE_DATA
-        if [[ $REMOVE_DATA =~ ^[Yy]$ ]]; then
-            echo "Removing all mining data..."
-            rm -rf "$BASE_DIR"
-        else
-            echo "Mining data preserved."
-        fi
+        #read -p "Do you want to remove all data? (y/n): " REMOVE_DATA
+        #if [[ $REMOVE_DATA =~ ^[Yy]$ ]]; then
+        #    echo "Removing all mining data..."
+        #    rm -rf "$BASE_DIR"
+        #else
+        #    echo "Mining data preserved."
+        #fi
 
         echo -e "${GREEN}Uninstallation completed successfully.${NC}"
     else
