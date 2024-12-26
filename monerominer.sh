@@ -229,7 +229,7 @@ handle_interrupt() {
     exit 1
 }
 
-setup_monero_node() {
+setup_monero_daemon() {
     log "Setting up Monero node version ${MONERO_VERSION}..."
     
     mkdir -p "$MONERO_DIR"
@@ -524,6 +524,45 @@ restart_services() {
     start_services
 }
 
+show_logs() {
+    echo -e "${BLUE}===== Available Log Files =====${NC}"
+    log_files=(
+        "$MONERO_DIR/monerod.log"         # Monero daemon log
+        "/var/log/monerod.log"            # Monero daemon service log
+        "/var/log/monerod.error.log"      # Monero daemon error log
+        "/var/log/p2pool.log"             # P2Pool log
+        "/var/log/p2pool.error.log"       # P2Pool error log
+        "/var/log/xmrig.log"              # XMRig log
+        "/var/log/xmrig.error.log"        # XMRig error log
+    )
+
+    # Display log files
+    for i in "${!log_files[@]}"; do
+        echo -e "${GREEN}[$i] ${log_files[$i]}${NC}"
+    done
+
+    # Get user selection
+    read -p "Select a log file to view (0-${#log_files[@]}): " log_selection
+
+    # Validate selection
+    if ! [[ "$log_selection" =~ ^[0-9]+$ ]] || [ "$log_selection" -lt 0 ] || [ "$log_selection" -ge "${#log_files[@]}" ]; then
+        echo -e "${RED}Invalid selection. Exiting...${NC}"
+        return
+    fi
+
+    # Display selected log file
+    selected_log="${log_files[$log_selection]}"
+    echo -e "${YELLOW}Displaying content of: $selected_log${NC}"
+    echo
+
+    # Check if the log file exists before attempting to print
+    if [ -f "$selected_log" ]; then
+        cat "$selected_log"
+    else
+        echo -e "${RED}Log file does not exist: $selected_log${NC}"
+    fi
+}
+
 show_help() {
     echo -e "${BLUE}===== Monero P2Pool Mining Tool=====${NC}"
     echo -e "Usage: $0 [COMMAND]"
@@ -572,7 +611,7 @@ main() {
 
     # Installation steps
     install_dependencies
-    setup_monero_node
+    setup_monero_daemon
 
     # Check if blockchain needs syncing
     if ! check_blockchain_sync; then
@@ -644,6 +683,9 @@ case "$1" in
         ;;
     status)
         check_services_status
+        ;;
+    logs)
+        show_logs
         ;;
     help|--help|-h)
         show_help
