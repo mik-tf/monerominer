@@ -50,7 +50,7 @@ P2POOL_VERSION=$(get_latest_p2pool_version)
 XMRIG_VERSION=$(get_latest_xmrig_version)
 
 # Directory structure
-BASE_DIR="$HOME/monero-miner"
+BASE_DIR="$HOME/monero-project"
 MONERO_DIR="$BASE_DIR/monero"
 P2POOL_DIR="$BASE_DIR/p2pool"
 XMRIG_DIR="$BASE_DIR/xmrig"
