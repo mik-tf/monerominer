@@ -262,7 +262,6 @@ log-level=0
 zmq-pub=tcp://127.0.0.1:18083
 disable-dns-checkpoints=1
 enable-dns-blocklist=1
-non-interactive=1
 prune-blockchain=1
 mining-threads=${CPU_THREADS}
 
@@ -377,7 +376,7 @@ create_service_scripts() {
     sudo tee /usr/local/bin/run-monerod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${MONERO_DIR}
-sudo ./monerod --data-dir ${MONERO_DIR}/data --prune-blockchain --log-file ${MONERO_DIR}/monerod.log --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist --non-interactive
+sudo ./monerod --config-file=${MONERO_DIR}/monerod.conf --non-interactive
 EOF
 
     # Create P2Pool script
@@ -589,7 +588,7 @@ main() {
             trap handle_interrupt SIGINT
             
             # Run monerod in interactive mode for initial sync
-            if ! (cd "${MONERO_DIR}" && sudo ./monerod --data-dir ${MONERO_DIR}/data --prune-blockchain --log-file ${MONERO_DIR}/monerod.log --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist); then
+            if ! (cd "${MONERO_DIR}" && sudo ./monerod --config-file=${MONERO_DIR}/monerod.conf); then
                 echo -e "\n${RED}Sync was interrupted or failed. Exiting...${NC}"
                 exit 1
             fi
