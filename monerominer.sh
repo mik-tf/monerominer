@@ -50,7 +50,7 @@ P2POOL_VERSION=$(get_latest_p2pool_version)
 XMRIG_VERSION=$(get_latest_xmrig_version)
 
 # Directory structure
-BASE_DIR="$HOME/monero-project"
+BASE_DIR="$HOME/monero-miner"
 MONERO_DIR="$BASE_DIR/monero"
 P2POOL_DIR="$BASE_DIR/p2pool"
 XMRIG_DIR="$BASE_DIR/xmrig"
@@ -116,13 +116,6 @@ install() {
         sudo chown root:root /usr/local/bin/monerominer
         sudo chmod 755 /usr/local/bin/monerominer
 
-        # Create configuration directory
-        sudo mkdir -p /etc/monerominer
-        
-        # Create data directory
-        sudo mkdir -p /var/lib/monerominer
-        sudo chown -R $USER:$USER /var/lib/monerominer
-
         echo
         echo -e "${PURPLE}monerominer has been installed successfully.${NC}"
         echo -e "You can now use ${GREEN}monerominer${NC} command from anywhere."
@@ -143,7 +136,7 @@ install() {
 # Function to uninstall the script and clean up
 uninstall() {
     echo
-    echo -e "${YELLOW}Uninstalling Monero P2Pool Mining Script...${NC}"
+    echo -e "${YELLOW}Uninstalling Monero P2Pool XMRIG Mining Script...${NC}"
     
     if sudo -v; then
         # Stop services if running
@@ -167,16 +160,6 @@ uninstall() {
         sudo rm -f /usr/local/bin/monerominer
         # Remove environment file
         rm -f "$HOME/.monero_environment"
-
-        # Ask user if they want to remove conf
-        read -p "Do you want to remove all configurations? (y/n): " REMOVE_CONF
-        if [[ $REMOVE_CONF =~ ^[Yy]$ ]]; then
-            echo "Removing all configurations..."
-            sudo rm -rf /etc/monerominer
-            sudo rm -rf /var/lib/monerominer
-        else
-            echo "Configurations preserved."
-        fi
 
         # Ask user if they want to remove data
         read -p "Do you want to remove all data? (y/n): " REMOVE_DATA
@@ -268,21 +251,28 @@ setup_monero_node() {
     tar xjf "$TARFILE" --strip-components=1
     #rm monero.tar.bz2
     
+    sudo touch ${MONERO_DIR}/monerod.log
+    sudo chown -R root:root ${MONERO_DIR}/monerod.log
+
     # Create monero config
     cat > "$MONERO_DIR/monerod.conf" << EOF
-data-dir=$MONERO_DIR/data
-log-file=$MONERO_DIR/monerod.log
+data-dir=${MONERO_DIR}/data
+log-file=${MONERO_DIR}/monerod.log
 log-level=0
 zmq-pub=tcp://127.0.0.1:18083
 disable-dns-checkpoints=1
 enable-dns-blocklist=1
+non-interactive=1
+prune-blockchain=1
+mining-threads=${CPU_THREADS}
+
 EOF
 }
 
 check_blockchain_sync() {
-    if [ -f "$MONERO_DIR/data/lmdb/data.mdb" ]; then
+    if [ -f "${MONERO_DIR}/data/lmdb/data.mdb" ]; then
         # Blockchain data exists, check if synced
-        if tail -n 50 "$MONERO_DIR/monerod.log" 2>/dev/null | grep -q "Synchronized OK"; then
+        if tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "Synchronized OK"; then
             return 0  # Synced
         fi
     fi
@@ -387,14 +377,14 @@ create_service_scripts() {
     sudo tee /usr/local/bin/run-monerod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${MONERO_DIR}
-./monerod --data-dir ${MONERO_DIR}/data --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist --non-interactive
+sudo ./monerod --data-dir ${MONERO_DIR}/data --prune-blockchain --log-file ${MONERO_DIR}/monerod.log --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist --non-interactive
 EOF
 
     # Create P2Pool script
     sudo tee /usr/local/bin/run-p2pool.sh > /dev/null << EOF
 #!/bin/bash
 cd ${P2POOL_DIR}
-./p2pool \
+sudo ./p2pool \
     --wallet ${WALLET_ADDRESS} \
     --host 127.0.0.1 \
     $(if [[ $USE_P2POOL_MINI =~ ^[Yy]$ ]]; then echo "--mini"; fi)
@@ -483,9 +473,9 @@ WantedBy=multi-user.target
 EOF
 
     # Create log directory and set permissions
-    sudo mkdir -p /var/log
+    sudo mkdir -p /var/log/monero
     sudo touch /var/log/{monerod,monerod.error,p2pool,p2pool.error,xmrig,xmrig.error}.log
-    sudo chown -R ${USER}:${USER} /var/log/{monerod,monerod.error,p2pool,p2pool.error,xmrig,xmrig.error}.log
+    sudo chown -R root:root /var/log/{monerod,monerod.error,p2pool,p2pool.error,xmrig,xmrig.error}.log
 
     # Reload systemd
     sudo systemctl daemon-reload
@@ -548,7 +538,6 @@ show_help() {
     echo -e "${GREEN}  start${NC}         - Start all Monero services"
     echo -e "${GREEN}  stop${NC}          - Stop all Monero services"
     echo -e "${GREEN}  restart${NC}       - Restart all Monero services"
-    echo -e "${GREEN}  stats${NC}         - Show mining statistics"
     echo
     echo "Examples:"
     echo "  monerominer build     # Run full installation"
@@ -600,7 +589,7 @@ main() {
             trap handle_interrupt SIGINT
             
             # Run monerod in interactive mode for initial sync
-            if ! (cd "${MONERO_DIR}" && ./monerod --config-file="${MONERO_DIR}/monerod.conf"); then
+            if ! (cd "${MONERO_DIR}" && sudo ./monerod --data-dir ${MONERO_DIR}/data --prune-blockchain --log-file ${MONERO_DIR}/monerod.log --zmq-pub tcp://127.0.0.1:18083 --disable-dns-checkpoints --enable-dns-blocklist); then
                 echo -e "\n${RED}Sync was interrupted or failed. Exiting...${NC}"
                 exit 1
             fi
@@ -630,13 +619,8 @@ main() {
     # Show completion message
     echo -e "${GREEN}Installation completed successfully!${NC}"
     echo -e "Mining directory: ${BLUE}$BASE_DIR${NC}"
-    echo -e "Configuration files:"
-    echo -e "  Monero: ${BLUE}$MONERO_DIR/monerod.conf${NC}"
-    echo -e "  P2Pool: ${BLUE}$P2POOL_DIR/config.json${NC}"
-    echo -e "  XMRig:  ${BLUE}$XMRIG_DIR/config.json${NC}"
     echo
     echo -e "Use '${YELLOW}$0 status${NC}' to check service status"
-    echo -e "Use '${YELLOW}$0 stats${NC}' to view mining statistics"
 }
 
 # Command line argument handling
