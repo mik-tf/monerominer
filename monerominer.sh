@@ -271,7 +271,7 @@ EOF
 check_blockchain_sync() {
     if [ -f "${MONERO_DIR}/data/lmdb/data.mdb" ]; then
         # Blockchain data exists, check if synced
-        if tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "Synchronized OK" || tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "100%"; then
+        if tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "You are now synchronized with the network" || tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "100%"; then
             return 0  # Synced
         fi
     fi
@@ -659,7 +659,7 @@ main() {
     echo -e "${GREEN}Installation completed successfully!${NC}"
     echo -e "Mining directory: ${BLUE}$BASE_DIR${NC}"
     echo
-    echo -e "Use '${YELLOW}$0 status${NC}' to check service status"
+    echo -e "Use '${YELLOW}monerominer status${NC}' to check service status"
 }
 
 # Command line argument handling
