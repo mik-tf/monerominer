@@ -271,7 +271,7 @@ EOF
 check_blockchain_sync() {
     if [ -f "${MONERO_DIR}/data/lmdb/data.mdb" ]; then
         # Blockchain data exists, check if synced
-        if tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "Synchronized OK"; then
+        if tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "Synchronized OK" || tail -n 50 "${MONERO_DIR}/monerod.log" 2>/dev/null | grep -q "100%"; then
             return 0  # Synced
         fi
     fi
@@ -576,6 +576,7 @@ show_help() {
     echo -e "${GREEN}  start${NC}         - Start all Monero services"
     echo -e "${GREEN}  stop${NC}          - Stop all Monero services"
     echo -e "${GREEN}  restart${NC}       - Restart all Monero services"
+    echo -e "${GREEN}  logs${NC}           - Show service logs"
     echo
     echo "Examples:"
     echo "  monerominer build     # Run full installation"
