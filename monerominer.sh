@@ -417,6 +417,7 @@ After=network.target
 [Service]
 Type=simple
 User=${USER}
+Group=${USER}
 ExecStart=/usr/local/bin/run-monerod.sh
 StandardInput=null
 StandardOutput=append:/var/log/monerod.log
@@ -438,6 +439,7 @@ Requires=monerod.service
 [Service]
 Type=simple
 User=${USER}
+Group=${USER}
 ExecStart=/usr/local/bin/run-p2pool.sh
 StandardInput=null
 StandardOutput=append:/var/log/p2pool.log
