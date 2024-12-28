@@ -376,14 +376,14 @@ create_service_scripts() {
     sudo tee /usr/local/bin/run-monerod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${MONERO_DIR}
-sudo ./monerod --config-file=${MONERO_DIR}/monerod.conf --non-interactive
+./monerod --config-file=${MONERO_DIR}/monerod.conf --non-interactive
 EOF
 
     # Create P2Pool script
     sudo tee /usr/local/bin/run-p2pool.sh > /dev/null << EOF
 #!/bin/bash
 cd ${P2POOL_DIR}
-sudo ./p2pool \
+./p2pool \
     --wallet ${WALLET_ADDRESS} \
     --host 127.0.0.1 \
     $(if [[ $USE_P2POOL_MINI =~ ^[Yy]$ ]]; then echo "--mini"; fi)
