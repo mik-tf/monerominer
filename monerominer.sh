@@ -42,6 +42,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Configuration Variables
@@ -347,8 +348,6 @@ setup_p2pool() {
     else
         log "Running in standard mode"
     fi
-    log "Mining port: ${MINING_PORT}"
-    log "ZMQ port: ${MONERO_ZMQ_PORT}"
 }
 
 # Function to setup XMRig CPU miner
@@ -538,13 +537,12 @@ restart_services() {
 show_logs() {
     echo -e "${BLUE}===== Available Log Files =====${NC}"
     log_files=(
-        "$MONERO_DIR/monerod.log"         # Monero daemon log
-        "/var/log/monerod.log"            # Monero daemon service log
-        "/var/log/monerod.error.log"      # Monero daemon error log
-        "/var/log/p2pool.log"             # P2Pool log
-        "/var/log/p2pool.error.log"       # P2Pool error log
-        "/var/log/xmrig.log"              # XMRig log
-        "/var/log/xmrig.error.log"        # XMRig error log
+        "/var/log/monerod.log"              # Monero daemon service log
+        "/var/log/monerod.error.log"        # Monero daemon error log
+        "/var/log/p2pool.log"               # P2Pool log
+        "/var/log/p2pool.error.log"         # P2Pool error log
+        "/var/log/xmrig.log"                # XMRig log
+        "/var/log/xmrig.error.log"          # XMRig error log
     )
 
     # Display log files
@@ -553,7 +551,7 @@ show_logs() {
     done
 
     # Get user selection
-    read -p "Select a log file to view (0-${#log_files[@]}): " log_selection
+    read -p "Select a log file to view (0-$((${#log_files[@]}-1))): " log_selection
 
     # Validate selection
     if ! [[ "$log_selection" =~ ^[0-9]+$ ]] || [ "$log_selection" -lt 0 ] || [ "$log_selection" -ge "${#log_files[@]}" ]; then
@@ -572,6 +570,97 @@ show_logs() {
     else
         echo -e "${RED}Log file does not exist: $selected_log${NC}"
     fi
+
+    echo
+    read -p "Press Enter to continue..."
+}
+
+delete_logs() {
+    local logs=(
+        "/var/log/monerod.log"
+        "/var/log/monerod.error.log"
+        "/var/log/p2pool.log"
+        "/var/log/p2pool.error.log"
+        "/var/log/xmrig.log"
+        "/var/log/xmrig.error.log"
+    )
+
+    echo "Available logs to delete:"
+    for i in "${!logs[@]}"; do
+        echo "[$i] ${logs[$i]}"
+    done
+
+    read -p "Enter the number of the log to delete (or 'all' to delete all logs): " choice
+
+    if [[ "$choice" == "all" ]]; then
+        for log in "${logs[@]}"; do
+            if [ -f "$log" ]; then
+                sudo rm "$log"
+                echo "Deleted: $log"
+            else
+                echo "File not found: $log"
+            fi
+        done
+    elif [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -lt ${#logs[@]} ]; then
+        if [ -f "${logs[$choice]}" ]; then
+            sudo rm "${logs[$choice]}"
+            echo "Deleted: ${logs[$choice]}"
+        else
+            echo "File not found: ${logs[$choice]}"
+        fi
+    else
+        echo "Invalid choice"
+        return 1
+    fi
+
+    await_enter
+}
+
+await_enter() {
+    echo
+    read -p "Press Enter to continue..."
+}
+
+show_interactive_menu() {
+    while true; do
+        clear
+        echo -e "${BLUE}╔════════════════════════════════════╗${NC}"
+        echo -e "${BLUE}║      Monero P2Pool Mining          ║${NC}"
+        echo -e "${BLUE}╚════════════════════════════════════╝${NC}"
+        echo
+        echo "1) Start mining"
+        echo "2) Show status of services"
+        echo "3) Start the services"
+        echo "4) Stop the services"
+        echo "5) Restart the services"
+        echo "6) Show Logs"
+        echo "7) Delete Logs"
+        echo "8) Exit"
+        echo
+        read -p "Select an option (1-8): " choice
+
+        case $choice in
+            1) main ;;
+            2) check_services_status 
+               await_enter ;;
+            3) start_services
+               await_enter ;;
+            4) stop_services
+               await_enter ;;
+            5) restart_services
+               await_enter ;;
+            6) show_logs ;;
+            7) delete_logs ;;
+            8) 
+                echo -e "${GREEN}Exiting...${NC}"
+                exit 0 
+                ;;
+            *) 
+                echo -e "${RED}Invalid option${NC}"
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 show_help() {
@@ -673,39 +762,54 @@ main() {
     echo -e "Use '${YELLOW}monerominer status${NC}' to check service status"
 }
 
-# Command line argument handling
-case "$1" in
-    install)
-        install
-        ;;
-    uninstall)
-        uninstall
-        ;;
-    build)
-        main
-        ;;
-    start)
-        start_services
-        ;;
-    stop)
-        stop_services
-        ;;
-    restart)
-        restart_services
-        ;;
-    status)
-        check_services_status
-        ;;
-    logs)
-        show_logs
-        ;;
-    help|--help|-h)
-        show_help
-        ;;
-    *)
-        show_help
-        exit 1
-        ;;
-esac
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    trap 'echo -e "\n${RED}Script interrupted${NC}"; exit 1' SIGINT SIGTERM
+    
+    if [ $# -eq 0 ]; then
+        show_interactive_menu
+    else
+        case "$1" in
+            install)
+                install
+                ;;
+            uninstall)
+                uninstall
+                ;;
+            build)
+                main
+                ;;
+            start)
+                start_services
+                exit 0
+                ;;
+            stop)
+                stop_services
+                exit 0
+                ;;
+            restart)
+                restart_services
+                exit 0
+                ;;
+            status)
+                check_services_status
+                exit 0
+                ;;
+            logs)
+                show_logs
+                ;;
+            delete-logs)
+                delete_logs
+                ;;
+            help|--help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                show_help
+                exit 1
+                ;;
+        esac
+    fi
+fi
 
 exit 0
