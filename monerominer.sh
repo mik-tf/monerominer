@@ -377,44 +377,21 @@ setup_xmrig() {
     log "XMRig setup completed successfully"
 }
 
-create_service_scripts() {
-    log "Creating service scripts..."
-    
-    # Create monerod script
-    sudo tee /usr/local/bin/run-monerod.sh > /dev/null << EOF
-#!/bin/bash
-cd ${MONERO_DIR}
-./monerod --config-file=${MONERO_DIR}/monerod.conf --non-interactive
-EOF
-
-    # Create P2Pool script
-    sudo tee /usr/local/bin/run-p2pool.sh > /dev/null << EOF
-#!/bin/bash
-cd ${P2POOL_DIR}
-./p2pool \
-    --wallet ${WALLET_ADDRESS} \
-    --host 127.0.0.1 \
-    $(if [[ $USE_P2POOL_MINI =~ ^[Yy]$ ]]; then echo "--mini"; fi)
-EOF
-
-    # Create XMRig script
-    sudo tee /usr/local/bin/run-xmrig.sh > /dev/null << EOF
-#!/bin/bash
-cd ${XMRIG_DIR}
-./xmrig -o 127.0.0.1:3333 -u x+50000 --randomx-1gb-pages
-EOF
-
-    # Make scripts executable
-    sudo chmod +x /usr/local/bin/run-monerod.sh
-    sudo chmod +x /usr/local/bin/run-p2pool.sh
-    sudo chmod +x /usr/local/bin/run-xmrig.sh
+setup_logs() {
+    # Create log files with proper permissions
+    sudo install -m 644 -o $USER -g $USER /dev/null /var/log/monerod.log
+    sudo install -m 644 -o $USER -g $USER /dev/null /var/log/monerod.error.log
+    sudo install -m 644 -o $USER -g $USER /dev/null /var/log/p2pool.log
+    sudo install -m 644 -o $USER -g $USER /dev/null /var/log/p2pool.error.log
+    # XMRig logs should be owned by root
+    sudo install -m 644 -o root -g root /dev/null /var/log/xmrig.log
 }
 
 create_systemd_services() {
     log "Creating systemd services..."
     
-    # Create the service scripts first
-    create_service_scripts
+    # Setup logs first
+    setup_logs
 
     # Monero daemon service
     sudo tee /etc/systemd/system/monerod.service > /dev/null << EOF
@@ -424,10 +401,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=${USER}
-Group=${USER}
-ExecStart=/usr/local/bin/run-monerod.sh
-StandardInput=null
+User=$USER
+Group=$USER
+ExecStart=${MONERO_DIR}/monerod --config-file=${MONERO_DIR}/monerod.conf --non-interactive
 StandardOutput=append:/var/log/monerod.log
 StandardError=append:/var/log/monerod.error.log
 Restart=always
@@ -446,10 +422,9 @@ Requires=monerod.service
 
 [Service]
 Type=simple
-User=${USER}
-Group=${USER}
-ExecStart=/usr/local/bin/run-p2pool.sh
-StandardInput=null
+User=$USER
+Group=$USER
+ExecStart=${P2POOL_DIR}/p2pool --wallet ${WALLET_ADDRESS} --host 127.0.0.1 $(if [[ $USE_P2POOL_MINI =~ ^[Yy]$ ]]; then echo "--mini"; fi)
 StandardOutput=append:/var/log/p2pool.log
 StandardError=append:/var/log/p2pool.error.log
 Restart=always
@@ -469,10 +444,8 @@ Requires=p2pool.service
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/run-xmrig.sh
-StandardInput=null
-StandardOutput=append:/var/log/xmrig.log
-StandardError=append:/var/log/xmrig.error.log
+Group=root
+ExecStart=${XMRIG_DIR}/xmrig -o 127.0.0.1:3333 -u x+50000 --randomx-1gb-pages --log-file=/var/log/xmrig.log --verbose
 Restart=always
 RestartSec=30
 Nice=10
@@ -483,8 +456,11 @@ EOF
 
     # Create log directory and set permissions
     sudo mkdir -p /var/log/monero
-    sudo touch /var/log/{monerod,monerod.error,p2pool,p2pool.error,xmrig,xmrig.error}.log
-    sudo chown -R root:root /var/log/{monerod,monerod.error,p2pool,p2pool.error,xmrig,xmrig.error}.log
+    sudo touch /var/log/{monerod,monerod.error,p2pool,p2pool.error}.log
+    sudo chown -R $USER:$USER /var/log/{monerod,monerod.error,p2pool,p2pool.error}.log
+    # XMRig logs are handled separately since they run as root
+    sudo touch /var/log/{xmrig,xmrig.error}.log
+    sudo chown root:root /var/log/{xmrig,xmrig.error}.log
 
     # Reload systemd
     sudo systemctl daemon-reload
@@ -542,7 +518,6 @@ show_logs() {
         "/var/log/p2pool.log"               # P2Pool log
         "/var/log/p2pool.error.log"         # P2Pool error log
         "/var/log/xmrig.log"                # XMRig log
-        "/var/log/xmrig.error.log"          # XMRig error log
     )
 
     # Display log files
@@ -582,7 +557,6 @@ delete_logs() {
         "/var/log/p2pool.log"
         "/var/log/p2pool.error.log"
         "/var/log/xmrig.log"
-        "/var/log/xmrig.error.log"
     )
 
     echo "Available logs to delete:"
