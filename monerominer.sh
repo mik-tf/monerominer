@@ -233,6 +233,7 @@ setup_monero_daemon() {
     log "Setting up Monero node version ${MONERO_VERSION}..."
     
     mkdir -p "$MONERO_DIR"
+    mkdir -p "$MONERO_DIR/data"
     cd "$MONERO_DIR" || error "Failed to enter Monero directory"
     
     # Remove 'v' prefix if present
@@ -249,10 +250,15 @@ setup_monero_daemon() {
     fi
     
     tar xjf "$TARFILE" --strip-components=1
-    #rm monero.tar.bz2
     
+    # Set proper permissions
+    sudo chown -R $USER:$USER "$MONERO_DIR"
+    sudo chmod -R 755 "$MONERO_DIR"
+    
+    # Create and set permissions for log file
     sudo touch ${MONERO_DIR}/monerod.log
-    sudo chown -R root:root ${MONERO_DIR}/monerod.log
+    sudo chown $USER:$USER ${MONERO_DIR}/monerod.log
+    sudo chmod 644 ${MONERO_DIR}/monerod.log
 
     # Create monero config
     cat > "$MONERO_DIR/monerod.conf" << EOF
@@ -264,8 +270,11 @@ disable-dns-checkpoints=1
 enable-dns-blocklist=1
 prune-blockchain=1
 mining-threads=${CPU_THREADS}
-
 EOF
+
+    # Set proper permissions for data directory
+    sudo chown -R $USER:$USER "$MONERO_DIR/data"
+    sudo chmod -R 755 "$MONERO_DIR/data"
 }
 
 check_blockchain_sync() {
