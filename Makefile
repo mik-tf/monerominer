@@ -1,9 +1,13 @@
+# Get the script name dynamically based on sole script in repo
+SCRIPT_NAME := $(wildcard *.sh)
+INSTALL_NAME := $(basename $(SCRIPT_NAME))
+
 build:
-	bash monerominer.sh install
+	bash $(SCRIPT_NAME) install
 
 rebuild:
-	monerominer uninstall
-	bash monerominer.sh install
+	$(INSTALL_NAME) uninstall
+	bash $(SCRIPT_NAME) install
 	
 delete:
-	monerominer uninstall
+	$(INSTALL_NAME) uninstall
